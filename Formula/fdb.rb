@@ -19,8 +19,8 @@ class Fdb < Formula
 
   depends_on "cmake" => [:build, :test]
   depends_on "ecbuild" => [:build, :test]
-  depends_on "eckit"
-  depends_on "metkit"
+  depends_on "eckit" => [:build, :test]
+  depends_on "metkit" => [:build, :test]
   # depends_on "lapack"
   # depends_on "lz4"
   # depends_on "openblas"
