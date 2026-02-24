@@ -126,8 +126,8 @@ class Eckit < Formula
 end
 
 __END__
---- src/eckit/serialisation/Stream.cc
-+++ src/eckit/serialisation/Stream.cc
+--- a/src/eckit/serialisation/Stream.cc
++++ b/src/eckit/serialisation/Stream.cc
 @@ -215,6 +215,13 @@
      }
  
