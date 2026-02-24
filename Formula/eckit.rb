@@ -128,7 +128,7 @@ end
 __END__
 --- a/src/eckit/serialisation/Stream.cc
 +++ b/src/eckit/serialisation/Stream.cc
-@@ -215,6 +215,13 @@
+@@ -214,6 +214,13 @@
      }
  
      if (need != t) {
@@ -142,7 +142,7 @@ __END__
          badTag(need, t);
      }
  
-@@ -499,9 +506,14 @@
+@@ -498,16 +505,26 @@
          uint32_t u;
          int32_t s;
      } u;
@@ -160,7 +160,7 @@ __END__
      T("r long", x);
      return *this;
  }
-@@ -509,8 +521,13 @@
+ 
  Stream& Stream::operator>>(unsigned long& x) {
 -    readTag(tag_unsigned_long);
 -    x = getLong();
@@ -174,7 +174,7 @@ __END__
      T("r unsigned long", x);
      return *this;
  }
-@@ -520,12 +537,16 @@
+@@ -517,22 +534,29 @@
          uint64_t u;
          int64_t s;
      } u;
@@ -189,6 +189,7 @@ __END__
 +        x = static_cast<long long>(u.s); // Safely sign-extends to 64-bit
 +    } else {
 +        uint64_t u1 = getLong();
++        ;
 +        uint64_t u2 = getLong();
 +        u.u         = (u1 << 32) | u2;
 +        x           = u.s;
@@ -196,7 +197,7 @@ __END__
      T("r long long", x);
      return *this;
  }
-@@ -536,10 +557,14 @@
+ 
  Stream& Stream::operator>>(unsigned long long& x) {
 -    readTag(tag_unsigned_long_long);
 -    unsigned long long u1 = getLong();
@@ -207,6 +208,7 @@ __END__
 +        x = static_cast<unsigned long long>(getLong());
 +    } else {
 +        unsigned long long u1 = getLong();
++        ;
 +        unsigned long long u2 = getLong();
 +        x                     = (u1 << 32) | u2;
 +    }
