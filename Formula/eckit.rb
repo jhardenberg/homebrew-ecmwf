@@ -1,12 +1,12 @@
 class Eckit < Formula
   desc "ECMWF cross-platform c++ toolkit"
   homepage "https://github.com/ecmwf/eckit"
-  # url "https://github.com/ecmwf/eckit/archive/refs/tags/1.29.3.tar.gz"
-  # sha256 "5afb6ac5bd95d68b7b0fdf42bdfe21370515b8e9ef7b3db91a89e021aa9133f2"
+  url "https://github.com/ecmwf/eckit/archive/refs/tags/1.29.3.tar.gz"
+  sha256 "5afb6ac5bd95d68b7b0fdf42bdfe21370515b8e9ef7b3db91a89e021aa9133f2"
   # url "https://github.com/ecmwf/eckit/archive/refs/tags/1.24.4.tar.gz"
   # sha256 "b6129eb4f7b8532aa6905033e4cf7d09aadc8547c225780fea3db196e34e4671"
-  url "https://github.com/ecmwf/eckit/archive/refs/tags/2.0.0.tar.gz"
-  sha256 "172e6e1226b61db44d9095e70d45612eb0887ce82bc1077d4f02200355334749"
+  # url "https://github.com/ecmwf/eckit/archive/refs/tags/2.0.0.tar.gz"
+  # sha256 "172e6e1226b61db44d9095e70d45612eb0887ce82bc1077d4f02200355334749"
   
   license "Apache-2.0"
 
@@ -31,6 +31,8 @@ class Eckit < Formula
   uses_from_macos "bzip2"
   uses_from_macos "ncurses"
   uses_from_macos "openssl"
+
+  patch :DATA
 
   def install
     mkdir "build" do
@@ -122,3 +124,92 @@ class Eckit < Formula
     system "./bin/eckit-test"
   end
 end
+
+__END__
+--- src/eckit/serialisation/Stream.cc
++++ src/eckit/serialisation/Stream.cc
+@@ -215,6 +215,13 @@
+     }
+ 
+     if (need != t) {
++        // Allow cross-platform off_t / size_t integer tag mismatches
++        if ((need == tag_long_long && t == tag_long) ||
++            (need == tag_long && t == tag_long_long) ||
++            (need == tag_unsigned_long_long && t == tag_unsigned_long) ||
++            (need == tag_unsigned_long && t == tag_unsigned_long_long)) {
++            return t; 
++        }
+         badTag(need, t);
+     }
+ 
+@@ -499,9 +506,14 @@
+         uint32_t u;
+         int32_t s;
+     } u;
+-    readTag(tag_long);
+-    u.u = getLong();
+-    x   = u.s;
++    if (readTag(tag_long) == tag_long_long) {
++        uint64_t u1 = getLong();
++        uint64_t u2 = getLong();
++        x = static_cast<long>((u1 << 32) | u2);
++    } else {
++        u.u = getLong();
++        x   = u.s;
++    }
+     T("r long", x);
+     return *this;
+ }
+@@ -509,8 +521,13 @@
+ Stream& Stream::operator>>(unsigned long& x) {
+-    readTag(tag_unsigned_long);
+-    x = getLong();
++    if (readTag(tag_unsigned_long) == tag_unsigned_long_long) {
++        unsigned long long u1 = getLong();
++        unsigned long long u2 = getLong();
++        x = static_cast<unsigned long>((u1 << 32) | u2);
++    } else {
++        x = getLong();
++    }
+     T("r unsigned long", x);
+     return *this;
+ }
+@@ -520,12 +537,16 @@
+         uint64_t u;
+         int64_t s;
+     } u;
+-    readTag(tag_long_long);
+-    uint64_t u1 = getLong();
+-    ;
+-    uint64_t u2 = getLong();
+-    u.u         = (u1 << 32) | u2;
+-    x           = u.s;
++    if (readTag(tag_long_long) == tag_long) {
++        u.u = getLong();    // Reads 32 bits
++        x = static_cast<long long>(u.s); // Safely sign-extends to 64-bit
++    } else {
++        uint64_t u1 = getLong();
++        uint64_t u2 = getLong();
++        u.u         = (u1 << 32) | u2;
++        x           = u.s;
++    }
+     T("r long long", x);
+     return *this;
+ }
+@@ -536,10 +557,14 @@
+ Stream& Stream::operator>>(unsigned long long& x) {
+-    readTag(tag_unsigned_long_long);
+-    unsigned long long u1 = getLong();
+-    ;
+-    unsigned long long u2 = getLong();
+-    x                     = (u1 << 32) | u2;
++    if (readTag(tag_unsigned_long_long) == tag_unsigned_long) {
++        x = static_cast<unsigned long long>(getLong());
++    } else {
++        unsigned long long u1 = getLong();
++        unsigned long long u2 = getLong();
++        x                     = (u1 << 32) | u2;
++    }
+     T("r unsigned long long", x);
+     return *this;
+ }
